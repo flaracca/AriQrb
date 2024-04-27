@@ -10,7 +10,8 @@
 class AriQrb
 {
 	#StartLocator;
-	#EndLocator
+	#EndLocator;
+	#ConvertToMiles;
 
 	#LongitudeConverter = {
 		A : {
@@ -199,30 +200,30 @@ class AriQrb
 		X: 23
 	}
 	
-	constructor(startLocator, endLocator)
+	constructor(startLocator, endLocator, convertToMiles = false)
 	{
 		this.#StartLocator = startLocator;
 		this.#EndLocator = endLocator;
+		this.#ConvertToMiles = convertToMiles;
 	}
 
 	calculate()
 	{
-		var startDegrees = this.getDegrees(this.#StartLocator);
-		var endDegrees = this.getDegrees(this.#EndLocator);
+		var startDegrees = this.#getDegrees(this.#StartLocator);
+		var endDegrees = this.#getDegrees(this.#EndLocator);
 
-		console.log(208, 'startDegrees', startDegrees);
-		console.log(208, 'endDegrees', endDegrees);
+		var a = this.#distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees);
 
-		return this.distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees)
+		return (!this.#ConvertToMiles) ? a : a / 1.609 ;
 	}
 
-	getDegrees(locator)
+	#getDegrees(locator)
 	{
-		var coordinates = this.locatorToCoordinate(locator);		
-		return this.coordinatesToDecimalDegrees(coordinates);
+		var coordinates = this.#locatorToCoordinate(locator);		
+		return this.#coordinatesToDecimalDegrees(coordinates);
 	}
 
-	locatorToCoordinate(locator)
+	#locatorToCoordinate(locator)
 	{
 		var chars = Array.from(locator);
 
@@ -274,15 +275,15 @@ class AriQrb
 		return [longitude, latitude];
 	}
 
-	coordinatesToDecimalDegrees(coordinates)
+	#coordinatesToDecimalDegrees(coordinates)
 	{
-		var longitude = this.coordinateToDecimalDegrees(coordinates[0]);
-		var latitude = this.coordinateToDecimalDegrees(coordinates[1]);
+		var longitude = this.#coordinateToDecimalDegrees(coordinates[0]);
+		var latitude = this.#coordinateToDecimalDegrees(coordinates[1]);
 
 		return [longitude, latitude];
 	}
 
-	coordinateToDecimalDegrees(coordinates)
+	#coordinateToDecimalDegrees(coordinates)
 	{
 		var degrees = coordinates.Minutes / 60;
 		degrees += coordinates.Seconds / 3600;
@@ -291,11 +292,11 @@ class AriQrb
 		return degrees;
 	}
 
-	degreesToRadians(degrees) {
+	#degreesToRadians(degrees) {
 	  return degrees * Math.PI / 180;
 	}
 
-	distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees) {
+	#distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees) {
 	  var earthRadiusKm = 6371;
 
 	  var lat1 = startDegrees[1];
@@ -304,15 +305,15 @@ class AriQrb
 	  var lon1 = startDegrees[0];
 	  var lon2 = endDegrees[0];
 
-	  var dLat = this.degreesToRadians(lat2 - lat1);
-	  var dLon = this.degreesToRadians(lon2 - lon1);
+	  var dLat = this.#degreesToRadians(lat2 - lat1);
+	  var dLon = this.#degreesToRadians(lon2 - lon1);
 
-	  lat1 = this.degreesToRadians(lat1);
-	  lat2 = this.degreesToRadians(lat2);
+	  lat1 = this.#degreesToRadians(lat1);
+	  lat2 = this.#degreesToRadians(lat2);
 
-	  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-	          Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
-	  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+	  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+	          Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2); 
+	  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 	  return (earthRadiusKm * c).toFixed(2);
 	}
 }
