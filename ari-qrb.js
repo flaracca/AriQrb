@@ -1,6 +1,6 @@
 /*!
  * 
- *  AriQrb 1.0.0
+ *  AriQrb 1.0.1
  *
  *  Copyright (c) 2024 Fabrizio La Racca, https://github.com/flaracca/AriQrb
  *  Licensed under the MIT License.
@@ -202,13 +202,23 @@ class AriQrb
 	
 	constructor(startLocator, endLocator, convertToMiles = false)
 	{
-		this.#StartLocator = startLocator;
-		this.#EndLocator = endLocator;
+		this.#StartLocator = startLocator.trim().toUpperCase();
+		this.#EndLocator = endLocator.trim().toUpperCase();
 		this.#ConvertToMiles = convertToMiles;
 	}
 
 	calculate()
 	{
+		if (this.#StartLocator.length != 6)
+		{
+			throw new Error('Origin WW Locator must be 6 chars long');
+		}
+
+		if (this.#EndLocator.length != 6)
+		{
+			throw new Error('Destination WW Locator must be 6 chars long');
+		}
+
 		var startDegrees = this.#getDegrees(this.#StartLocator);
 		var endDegrees = this.#getDegrees(this.#EndLocator);
 
@@ -229,6 +239,26 @@ class AriQrb
 
 		var longitude = {};
 		var latitude = {};
+
+		if (!this.#LongitudeConverter.hasOwnProperty(chars[0]))
+		{
+			throw new Error(`${chars[0]} isn't a valid parameter for longitude (first char)`);
+		}
+
+		if (!this.#LatitudeConverter.hasOwnProperty(chars[1]))
+		{
+			throw new Error(`${chars[1]} isn't a valid parameter for latitude (second char)`);
+		}
+
+		if (!this.#LatLongLastIncrementer.hasOwnProperty(chars[4]))
+		{
+			throw new Error(`${chars[4]} isn't a valid parameter for longitude incrementer (fifth char)`);
+		}
+
+		if (!this.#LatLongLastIncrementer.hasOwnProperty(chars[5]))
+		{
+			throw new Error(`${chars[5]} isn't a valid parameter for latitude incrementer (sixth char`);
+		}
 
 		longitude.Letter = this.#LongitudeConverter[chars[0]]['Letter'];
 		latitude.Letter = this.#LatitudeConverter[chars[1]]['Letter'];
