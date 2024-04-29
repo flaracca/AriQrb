@@ -6,6 +6,9 @@
  *  Licensed under the MIT License.
  *  http://opensource.org/licenses/mit-license
  *
+ *  SOURCES (italian):
+ *  https://iz8bgypino.jimdofree.com/home-page/il-locatore-wwl/
+ *  https://www.iu1lcp.it/i-radioamatori/world-wide-locator/
  */
 class AriQrb
 {
@@ -207,7 +210,64 @@ class AriQrb
 		this.#ConvertToMiles = convertToMiles;
 	}
 
-	calculate()
+	calculateDistance()
+	{
+		if (this.#initialValidation())
+		{
+			var startDegrees = this.#getDegrees(this.#StartLocator);
+			var endDegrees = this.#getDegrees(this.#EndLocator);
+
+			var a = this.#distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees);
+
+			return (!this.#ConvertToMiles) ? a : (a / 1.609).toFixed(2) ;
+		}		
+	}
+
+	getCoordinates()
+	{
+		if (this.#initialValidation())
+		{
+			var startCoordinates = this.#locatorToCoordinate(this.#StartLocator);
+			var endCoordinates = this.#locatorToCoordinate(this.#EndLocator);
+			var r = [ 	{
+							locator: this.#StartLocator, 
+							coordinates: 
+							{
+								longitude: startCoordinates[0], 
+								latitude: startCoordinates[1]
+							}
+						}, 
+						{
+							locator: this.#EndLocator,
+							coordinates:
+							{
+								longitude: endCoordinates[0], 
+								latitude: endCoordinates[1]
+							}
+						}
+					];
+			return r;
+		}
+	}
+
+	getDecimalCoordinates()
+	{
+		if (this.#initialValidation())
+		{
+			var startCoordinates = this.#coordinatesToDecimalDegrees(this.#locatorToCoordinate(this.#StartLocator));
+			var endCoordinates = this.#coordinatesToDecimalDegrees(this.#locatorToCoordinate(this.#EndLocator));
+			var r = [ {locator: this.#StartLocator, coordinates:startCoordinates}, {locator: this.#EndLocator, coordinates:endCoordinates}];
+			return r;
+		}
+	}
+
+	#getDegrees(locator)
+	{
+		var coordinates = this.#locatorToCoordinate(locator);		
+		return this.#coordinatesToDecimalDegrees(coordinates);
+	}
+
+	#initialValidation()
 	{
 		if (this.#StartLocator.length != 6)
 		{
@@ -219,18 +279,7 @@ class AriQrb
 			throw new Error('Destination WW Locator must be 6 chars long');
 		}
 
-		var startDegrees = this.#getDegrees(this.#StartLocator);
-		var endDegrees = this.#getDegrees(this.#EndLocator);
-
-		var a = this.#distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees);
-
-		return (!this.#ConvertToMiles) ? a : (a / 1.609).toFixed(2) ;
-	}
-
-	#getDegrees(locator)
-	{
-		var coordinates = this.#locatorToCoordinate(locator);		
-		return this.#coordinatesToDecimalDegrees(coordinates);
+		return true;
 	}
 
 	#locatorToCoordinate(locator)
@@ -263,62 +312,136 @@ class AriQrb
 		longitude.Letter = this.#LongitudeConverter[chars[0]]['Letter'];
 		latitude.Letter = this.#LatitudeConverter[chars[1]]['Letter'];
 
+		var operatorLongitude = (longitude.Letter == 'W') ? -1 : 1;
+		var operatorLatitude = (latitude.Letter == 'S') ? -1 : 1;
+
 		longitude.Degrees = this.#LongitudeConverter[chars[0]]['Degrees'];
 		latitude.Degrees = this.#LatitudeConverter[chars[1]]['Degrees'];
 
-		longitude.Degrees += (parseInt(chars[2]) * this.#LongitudeIncrementer.FirstDegree);
-		latitude.Degrees += (parseInt(chars[3]) * this.#LatitudeIncrementer.FirstDegree);
+		longitude.Degrees += ((parseInt(chars[2]) * this.#LongitudeIncrementer.FirstDegree) * operatorLongitude);
+		latitude.Degrees += ((parseInt(chars[3]) * this.#LatitudeIncrementer.FirstDegree) * operatorLatitude);
 
 		var minutesLong = (this.#LatLongLastIncrementer[chars[4]] * this.#LongitudeIncrementer.SecondMinutesPerDegree);
 		var minutesLat = (this.#LatLongLastIncrementer[chars[5]] * this.#LatitudeIncrementer.SecondMinutesPerDegree);
 
-		longitude.Minutes = minutesLong;
-		if (minutesLong >= 60)
+		if (longitude.Letter == 'E')
 		{
-			var a = minutesLong / 60;
-			var b = Math.floor(a);
-			var c = a - b;
+			longitude.Minutes = minutesLong;
+			if (minutesLong >= 60)
+			{
+				var a = minutesLong / 60;
+				var b = Math.floor(a);
+				var c = a - b;
 
-			longitude.Degrees += b;
-			longitude.Minutes = Math.round(c * 60);
+				longitude.Degrees += b;
+				longitude.Minutes = Math.floor(c * 60);
+			}
 		}
-
-		latitude.Minutes = minutesLat;
-		if (minutesLat >= 60)
+		else
 		{
-			var a = minutesLat / 60;
-			var b = Math.floor(a);
-			var c = a - b;
+			if (minutesLong >= 60)
+			{
+				var a = minutesLong / 60;
+				var b = Math.floor(a);
+				var c = a - b;
 
-			latitude.Degrees += b;
-			latitude.Minutes = Math.round(c * 60);
+				longitude.Degrees -= b;
+				longitude.Minutes = 60 - Math.floor(c * 60);
+			}
+			else
+			{
+				longitude.Minutes = 60 - minutesLong;
+				longitude.Degrees -= 1;
+			}
+		}
+		
+		if (latitude.Letter == 'N')
+		{
+			latitude.Minutes = minutesLat;
+			if (minutesLat >= 60)
+			{
+				var a = minutesLat / 60;
+				var b = Math.floor(a);
+				var c = a - b;
+
+				latitude.Degrees += b;
+				latitude.Minutes = Math.floor(c * 60);
+			}
+		}
+		else
+		{
+			if (minutesLat >= 60)
+			{
+				var a = minutesLat / 60;
+				var b = Math.floor(a);
+				var c = a - b;
+
+				latitude.Degrees -= b;
+				latitude.Minutes = 60 - Math.floor(c * 60);
+			}
+			else
+			{
+				latitude.Minutes = 60 - minutesLat;
+				latitude.Degrees -= 1;
+			}
 		}
 		
 		// so far we've got coordinates for the bottom left corner. We add the last correction to get the center
-
-		longitude.Minutes += 2;
-		longitude.Seconds = 30;
-
-		latitude.Minutes += 1;
-		latitude.Seconds = 15;
-
-		return [longitude, latitude];
+		if (longitude.Letter == 'E')
+		{
+			longitude.Minutes += 2;
+			longitude.Seconds = 30;
+		}
+		else
+		{
+			if (longitude.Minutes >= 2)  // 3' - 1'30" = 1' 30"
+			{
+				longitude.Minutes -= 2;
+			}
+			else
+			{
+				longitude.Degrees -= 1;
+				var minutes = longitude.Minutes - 2;
+				longitude.Minutes = 60 - minutes;
+			}
+			longitude.Seconds = 30;
+		}
+		
+		if (latitude.Letter == 'N')
+		{
+			latitude.Minutes += 1;
+			latitude.Seconds = 15;
+		}
+		else
+		{
+			if (latitude.Minutes >= 1)  // 3' - 1'345" = 1' 45"
+			{
+				latitude.Minutes -= 2;
+			}
+			else
+			{
+				latitude.Degrees -= 1;
+				var minutes = latitude.Minutes - 1;
+				latitude.Minutes = 60 - minutes;
+			}
+			latitude.Seconds = 45;
+		}
+			
+		return [longitude, latitude];		
 	}
 
 	#coordinatesToDecimalDegrees(coordinates)
 	{
 		var longitude = this.#coordinateToDecimalDegrees(coordinates[0]);
 		var latitude = this.#coordinateToDecimalDegrees(coordinates[1]);
-
 		return [longitude, latitude];
 	}
 
 	#coordinateToDecimalDegrees(coordinates)
-	{
-		var degrees = coordinates.Minutes / 60;
-		degrees += coordinates.Seconds / 3600;
-		degrees += coordinates.Degrees;
+	{		
+		var degrees = (coordinates.Minutes / 60) + (coordinates.Seconds / 3600) + coordinates.Degrees;
 
+		degrees *= (coordinates.Letter == 'E' || coordinates.Letter == 'N') ? 1 : -1;
 		return degrees;
 	}
 
