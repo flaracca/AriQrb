@@ -14,7 +14,6 @@ class AriQrb
 {
 	#StartLocator;
 	#EndLocator;
-	#ConvertToMiles;
 
 	#LongitudeConverter = {
 		A : {
@@ -203,14 +202,13 @@ class AriQrb
 		X: 23
 	}
 	
-	constructor(startLocator, endLocator, convertToMiles = false)
+	constructor(startLocator, endLocator)
 	{
 		this.#StartLocator = startLocator.trim().toUpperCase();
 		this.#EndLocator = endLocator.trim().toUpperCase();
-		this.#ConvertToMiles = convertToMiles;
 	}
 
-	calculateDistance()
+	calculateDistance(convertToMiles = false)
 	{
 		if (this.#initialValidation())
 		{
@@ -219,7 +217,7 @@ class AriQrb
 
 			var a = this.#distanceInKmBetweenEarthCoordinates(startDegrees, endDegrees);
 
-			return (!this.#ConvertToMiles) ? a : (a / 1.609).toFixed(2) ;
+			return (!convertToMiles) ? a : (a / 1.609).toFixed(2) ;
 		}		
 	}
 
@@ -229,14 +227,17 @@ class AriQrb
 		{
 			var startCoordinates = this.#locatorToCoordinate(this.#StartLocator);
 			var endCoordinates = this.#locatorToCoordinate(this.#EndLocator);
-			var r = [ 	{
+			var r = {
+					 	start:
+					 	{
 							locator: this.#StartLocator, 
 							coordinates: 
 							{
 								longitude: startCoordinates[0], 
 								latitude: startCoordinates[1]
 							}
-						}, 
+						},
+						end: 
 						{
 							locator: this.#EndLocator,
 							coordinates:
@@ -245,7 +246,7 @@ class AriQrb
 								latitude: endCoordinates[1]
 							}
 						}
-					];
+					};
 			return r;
 		}
 	}
@@ -256,7 +257,7 @@ class AriQrb
 		{
 			var startCoordinates = this.#coordinatesToDecimalDegrees(this.#locatorToCoordinate(this.#StartLocator));
 			var endCoordinates = this.#coordinatesToDecimalDegrees(this.#locatorToCoordinate(this.#EndLocator));
-			var r = [ {locator: this.#StartLocator, coordinates:startCoordinates}, {locator: this.#EndLocator, coordinates:endCoordinates}];
+			var r = { start: {locator: this.#StartLocator, coordinates:startCoordinates}, end: {locator: this.#EndLocator, coordinates:endCoordinates}};
 			return r;
 		}
 	}
@@ -326,7 +327,6 @@ class AriQrb
 
 		if (longitude.Letter == 'E')
 		{
-			longitude.Minutes = minutesLong;
 			if (minutesLong >= 60)
 			{
 				var a = minutesLong / 60;
@@ -335,6 +335,17 @@ class AriQrb
 
 				longitude.Degrees += b;
 				longitude.Minutes = Math.floor(c * 60);
+			}
+			else
+			{
+				longitude.Minutes = minutesLong;
+				if ((!Number.isInteger(minutesLong)))
+				{
+					var minsFloored = Math.floor(minutesLong);
+					var difference = minutesLong - minsFloored;
+
+					longitude.Minutes = (difference <= 0.5) ? minsFloored : Math.ceil(minutesLong);
+				}
 			}
 		}
 		else
@@ -357,7 +368,7 @@ class AriQrb
 		
 		if (latitude.Letter == 'N')
 		{
-			latitude.Minutes = minutesLat;
+			latitude.Minutes = (!Number.isInteger(minutesLat)) ? Math.round(minutesLat) : minutesLat;
 			if (minutesLat >= 60)
 			{
 				var a = minutesLat / 60;
@@ -366,6 +377,17 @@ class AriQrb
 
 				latitude.Degrees += b;
 				latitude.Minutes = Math.floor(c * 60);
+			}
+			else
+			{
+				latitude.Minutes = minutesLat;
+				if ((!Number.isInteger(minutesLat)))
+				{
+					var minsFloored = Math.floor(minutesLat);
+					var difference = minutesLat - minsFloored;
+
+					latitude.Minutes = (difference <= 0.5) ? minsFloored : Math.ceil(minutesLat);
+				}
 			}
 		}
 		else
@@ -387,6 +409,7 @@ class AriQrb
 		}
 		
 		// so far we've got coordinates for the bottom left corner. We add the last correction to get the center
+
 		if (longitude.Letter == 'E')
 		{
 			longitude.Minutes += 2;
@@ -406,7 +429,7 @@ class AriQrb
 			}
 			longitude.Seconds = 30;
 		}
-		
+
 		if (latitude.Letter == 'N')
 		{
 			latitude.Minutes += 1;
